@@ -75,9 +75,9 @@ namespace MathLogic
 			return new string(Enumerable.Range(startSymbol, endSymbol - startSymbol + 1).Select(c => (char)c).ToArray());
 		}
 
-        private static int StringFind(string source, string subject)
+        public static int StringFind(string source, string subject)
         {
-            if (/*(source == string.Empty) && */(subject == string.Empty))
+            if (subject == string.Empty)
                 return 0;
             if (source.Contains(subject))
             {
