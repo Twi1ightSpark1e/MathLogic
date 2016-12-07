@@ -1,0 +1,1 @@
+{"alphabet":["ab"],"permuts":[{"Item1":"ab","Item2":"a"},{"Item1":"b","Item2":""},{"Item1":"a","Item2":"b"}],"finals":[false,false,false]}
