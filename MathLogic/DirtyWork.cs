@@ -88,6 +88,28 @@ namespace MathLogic
             return -1;
         }
 
+		public static int StringFindAny(string source, string[] subjects, out int index)
+		{
+			if (subjects.Length == 0)
+			{
+				index = -1;
+				return -1;
+			}
+			int minpos = source.Length;
+			index = -1;
+			for (int i = 0; i < subjects.Length; i++)
+			{
+				int pos = StringFind(source, subjects[i]);
+				if (pos != -1)
+					if ((pos < minpos) || (minpos == source.Length))
+					{
+						minpos = pos;
+						index = i;
+					}
+			}
+			return (minpos == source.Length ? -1 : minpos);
+		}
+
         public static string DoWork(StartForm form, List<Tuple<string, string>> permuts, List<bool> finals)
         {
             int step = 1;
