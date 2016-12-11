@@ -19,7 +19,7 @@ namespace MathLogic
 		{
 			{ "int", "int64" },
 			{ "uint", "uint64" },
-			{ "bool", "bool" },
+			{ "bool", "boolean" },
 			{ "char", "char" },
 			{ "string", "string" },
 			{ "float", "single" },
@@ -32,17 +32,22 @@ namespace MathLogic
 		};
 		private List<(string name, int priority, Func<string, dynamic, dynamic, dynamic> function)> operators = new List<(string name, int priority, Func<string, object, object, dynamic> function)>()
 		{
-			{ ("+",  1,  (string type, dynamic left, dynamic right) => left + right) },
-			{ ("-",  1,  (string type, dynamic left, dynamic right) => left - right) },
-			{ ("*",  0,  (string type, dynamic left, dynamic right) => left * right) },
-			{ ("/",  0,  (string type, dynamic left, dynamic right) => left / right) },
-			{ ("%",  0,  (string type, dynamic left, dynamic right) => left % right) },
-			{ ("&",  2,  (string type, dynamic left, dynamic right) => left & right) },
-			{ ("|",  2,  (string type, dynamic left, dynamic right) => left | right) },
-			{ ("&&", -1, (string type, dynamic left, dynamic right) => left && right) },
-			{ ("||", -1, (string type, dynamic left, dynamic right) => left || right) },
-			{ ("=", -2, null) },
-			{ ("==", -1, (string type, dynamic left, dynamic right) => left == right) }
+			{ ("+",  1, (string type, dynamic left, dynamic right) => left +  right) },
+			{ ("-",  1, (string type, dynamic left, dynamic right) => left -  right) },
+			{ ("*",  0, (string type, dynamic left, dynamic right) => left *  right) },
+			{ ("/",  0, (string type, dynamic left, dynamic right) => left /  right) },
+			{ ("%",  0, (string type, dynamic left, dynamic right) => left %  right) },
+			{ ("&",  2, (string type, dynamic left, dynamic right) => left &  right) },
+			{ ("|",  2, (string type, dynamic left, dynamic right) => left |  right) },
+			{ ("&&", 3, (string type, dynamic left, dynamic right) => left && right) },
+			{ ("||", 3, (string type, dynamic left, dynamic right) => left || right) },
+			{ ("=", -1, null) },
+			{ ("==", 3, (string type, dynamic left, dynamic right) => left == right) },
+			{ (">",  3, (string type, dynamic left, dynamic right) => left >  right) },
+			{ ("<",  3, (string type, dynamic left, dynamic right) => left <  right) },
+			{ (">=", 3, (string type, dynamic left, dynamic right) => left >= right) },
+			{ ("<=", 3, (string type, dynamic left, dynamic right) => left <= right) },
+			{ ("!=", 3, (string type, dynamic left, dynamic right) => left != right) }
 		};
 
         public ScriptForm()
@@ -127,13 +132,17 @@ namespace MathLogic
 			{
 				if (source[i] == '(')
 				{
-					bracketsCount++;
+					bracketsCount += (isReverse ? -1 : 1);
+					if (bracketsCount < 0)
+						break;
 					temp += source[i];
 					continue;
 				}
 				else if (source[i] == ')')
 				{
-					bracketsCount--;
+					bracketsCount -= (isReverse ? -1 : 1);
+					if (bracketsCount < 0)
+						break;
 					temp += source[i];
 					continue;
 				}
@@ -161,38 +170,106 @@ namespace MathLogic
 			return temp;
 		}
 
+		private void RemoveUnnecessarySpaces(ref string value)
+		{
+			int bracketsCount = 0;
+			int symbolBracketsCount = 0;
+			bool skipNext = false;
+			for (int i = 0; i < value.Length; i++)
+			{
+				if (skipNext)
+				{
+					skipNext = false;
+					continue;
+				}
+				if ((symbolBracketsCount == 0) && (!skipNext) && (value[i] == ' '))
+				{
+					value = value.Remove(i, 1);
+					i--;
+				}
+				else if (value[i] == '\'')
+				{
+					skipNext = true;
+				}
+				else if (value[i] == '(')
+				{
+					bracketsCount++;
+				}
+				else if (value[i] == ')')
+				{
+					bracketsCount--;
+				}
+				else if ((value[i] == '\"') || (value[i] == '\''))
+				{
+					symbolBracketsCount = (symbolBracketsCount == 0 ? 1 : 0);
+				}
+			}
+		}
+
 		private void ResolveExpression(ref string expression)
 		{
-			//expression = expression.Replace(' ', new char()); //Not so fast, John! Expression may contain strings!
+			RemoveUnnecessarySpaces(ref expression);
 			foreach (var variable in variables)
 			{
 				if (expression == variable.Key)
 					expression = variables[expression].ToString();
 			}
-			for (int priority = 0; priority < 3; priority++)
+			int minPriority = (from x in operators
+							  select x.priority).Max();
+			for (int priority = 0; priority <= minPriority; priority++)
 			{
 				var ops = from x in operators
 						  where x.priority == priority
 						  select x;
-				for (int i = 0; i < ops.Count(); i++)
+				var opsNames = (from x in operators
+							   where x.priority == priority
+							   select x.name).ToList();
+				int pos = -1;
+				do
 				{
-					if (expression.Contains(ops.ElementAt(i).name))
+					pos = DirtyWork.StringFindAny(expression, opsNames.ToArray(), out int index);
+					if (pos != -1)
 					{
-						int position = DirtyWork.StringFind(expression, ops.ElementAt(i).name);
+						int position = DirtyWork.StringFind(expression, expression.Substring(pos, opsNames[index].Length));
+						//Check for bitwise operator found instead of logical
+						int t = position;
+						string tString = ReadOperator(expression, ref t);
+						if (tString != opsNames[index])
+						{
+							opsNames.RemoveAt(index);
+							continue;
+						}
+
+						string exp = expression;
+						var func = (from x in ops
+								    where x.name == exp.Substring(pos, opsNames[index].Length)
+									select x.function).First();
 						int temp = position - 1;
 						string left = new string(ReadOperand(expression, ref temp, true).Reverse().ToArray());
 						int insert = position - left.Length;
-						temp = position + 1;
+						temp = position + (opsNames[index].Length - 1) + 1;
 						string right = ReadOperand(expression, ref temp, false);
-						expression = expression.Remove(insert, left.Length + right.Length + 1).Replace("()", "");
+						expression = expression.Remove(insert, left.Length + right.Length + opsNames[index].Length);
+						int p = -1;
+						do
+						{
+							p = DirtyWork.StringFind(expression, "()");
+							if (p != -1)
+							{
+								expression = expression.Remove(p, 2);
+								if (p + 1 == insert)
+									insert--;
+							}
+						}
+						while (p != -1);
 						ResolveExpression(ref left);
 						ResolveExpression(ref right);
 						dynamic l = Convert.ChangeType(left, Type.GetType($"System.{types[GetTypeByValue(left)].ToString()}", false, true));
 						dynamic r = Convert.ChangeType(right, Type.GetType($"System.{types[GetTypeByValue(right)].ToString()}", false, true));
-						expression = expression.Insert(insert, ops.ElementAt(i).function(GetTypeByValue(left), l, r).ToString());
-						i = -1;
+						expression = expression.Insert(insert, func(GetTypeByValue(left), l, r).ToString());
 					}
 				}
+				while (pos != -1);
 			}
 		}
 
@@ -216,7 +293,9 @@ namespace MathLogic
 						string op = ReadOperator(command, ref temp);
 						if (op == "=") //Variable defined and initialized
 						{
-							string value = ReadOperand(command, ref temp);
+							command = command.Remove(0, command.IndexOf('=') + 1);
+							ResolveExpression(ref command);
+							string value = command;
 							if ((typename.Key.ToString() == "float") || (typename.Key.ToString() == "double"))
 								value = value.Replace('.', ',');
 							variables.Add(varname, GetInstance(typename.Value.ToString(), value));
@@ -252,12 +331,14 @@ namespace MathLogic
 
         private void executeButton_Click(object sender, EventArgs e)
         {
+			variables.Clear();
 			DoScript();
         }
 
         private void checkButton_Click(object sender, EventArgs e)
         {
-            DoScript();
+			variables.Clear();
+			DoScript();
         }
     }
 }
