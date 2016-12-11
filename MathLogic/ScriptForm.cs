@@ -309,16 +309,22 @@ namespace MathLogic
 					continue;
 				//Search for assigments
 				bool assigmentFound = false;
-				foreach (var varname in variables)
+				for (int i = 0; i < variables.Count; i++)
 				{
-					if (command.StartsWith(varname.Key))
+					var varname = variables.ElementAt(i).Key;
+					if (command.StartsWith(varname))
 					{
 						int temp = 0;
-						command = command.Remove(0, varname.Key.Length);
+						command = command.Remove(0, varname.Length);
 						string op = ReadOperator(command, ref temp);
 						if (op == "=")
 						{
-							//string value =
+							command = command.Remove(0, command.IndexOf('=') + 1);
+							ResolveExpression(ref command);
+							string value = command;
+							if ((GetTypeByValue(varname) == "float") || (GetTypeByValue(varname) == "double"))
+								value = value.Replace('.', ',');
+							variables[varname] = Convert.ChangeType(value, Type.GetType($"System.{GetTypeByValue(varname)}", false, true));
 							assigmentFound = true; 
 						}
 						else continue; //wutifak do u want from me? o_O
