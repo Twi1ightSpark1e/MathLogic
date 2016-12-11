@@ -157,7 +157,7 @@ namespace MathLogic
 							found = true;
 							break;
 						}
-					if (!found)
+					if ((!found) || (bracketsCount != 0))
 					{
 						temp += source[i];
 						continue;
@@ -206,6 +206,21 @@ namespace MathLogic
 			}
 		}
 
+		private string TrimBrackets(string source)
+		{
+			bool bracketsExists = false;
+			do
+			{
+				bracketsExists = (source[0] == '(') && (source[source.Length - 1] == ')');
+				if (bracketsExists)
+				{
+					source = source.Substring(1, source.Length - 2);
+				}
+			}
+			while (bracketsExists);
+			return source;
+		}
+
 		private void ResolveExpression(ref string expression)
 		{
 			RemoveUnnecessarySpaces(ref expression);
@@ -250,6 +265,8 @@ namespace MathLogic
 						temp = position + (opsNames[index].Length - 1) + 1;
 						string right = ReadOperand(expression, ref temp, false);
 						expression = expression.Remove(insert, left.Length + right.Length + opsNames[index].Length);
+						left = TrimBrackets(left);
+						right = TrimBrackets(right);
 						int p = -1;
 						do
 						{
@@ -294,10 +311,10 @@ namespace MathLogic
 						if (op == "=") //Variable defined and initialized
 						{
 							command = command.Remove(0, command.IndexOf('=') + 1);
-							ResolveExpression(ref command);
 							string value = command;
 							if ((typename.Key.ToString() == "float") || (typename.Key.ToString() == "double"))
 								value = value.Replace('.', ',');
+							ResolveExpression(ref value);
 							variables.Add(varname, GetInstance(typename.Value.ToString(), value));
 						}
 						else variables.Add(varname, GetInstance(typename.Value.ToString())); //Variable not initialized
@@ -320,10 +337,10 @@ namespace MathLogic
 						if (op == "=")
 						{
 							command = command.Remove(0, command.IndexOf('=') + 1);
-							ResolveExpression(ref command);
 							string value = command;
 							if ((GetTypeByValue(varname) == "float") || (GetTypeByValue(varname) == "double"))
 								value = value.Replace('.', ',');
+							ResolveExpression(ref value);
 							variables[varname] = Convert.ChangeType(value, Type.GetType($"System.{GetTypeByValue(varname)}", false, true));
 							assigmentFound = true; 
 						}
