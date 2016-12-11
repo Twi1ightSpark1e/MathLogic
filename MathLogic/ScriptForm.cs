@@ -21,7 +21,9 @@ namespace MathLogic
 			{ "uint", "uint64" },
 			{ "bool", "bool" },
 			{ "char", "char" },
-			{ "string", "string" }
+			{ "string", "string" },
+			{ "float", "single" },
+			{ "double", "double" }
 		};
 		private List<string> commands = new List<string>()
 		{
@@ -72,6 +74,10 @@ namespace MathLogic
 				return "int";
 			if (UInt64.TryParse(value, out ulong xulong))
 				return "uint";
+			if (Single.TryParse(value, out float xfloat))
+				return "float";
+			if (Double.TryParse(value, out double xdouble))
+				return "double";
 			if (variables.Keys.Contains(value))
 				return variables[value].GetType().Name;
 			return "error";
@@ -211,6 +217,8 @@ namespace MathLogic
 						if (op == "=") //Variable defined and initialized
 						{
 							string value = ReadOperand(command, ref temp);
+							if ((typename.Key.ToString() == "float") || (typename.Key.ToString() == "double"))
+								value = value.Replace('.', ',');
 							variables.Add(varname, GetInstance(typename.Value.ToString(), value));
 						}
 						else variables.Add(varname, GetInstance(typename.Value.ToString())); //Variable not initialized
