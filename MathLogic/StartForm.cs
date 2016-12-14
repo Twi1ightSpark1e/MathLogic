@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -10,7 +13,8 @@ namespace MathLogic
 	public partial class StartForm : Form
 	{
 		List<string> alphabet = new List<string>();
-		List<Tuple<string, string>> permuts = new List<Tuple<string, string>>();
+		List<Pair<string, string>> permuts = new List<Pair<string, string>>();
+		//List<Tuple<string, string>> permuts = new List<Tuple<string, string>>();
 		List<bool> finals = new List<bool>();
 		private delegate void InvokeWork();
 
@@ -59,15 +63,13 @@ namespace MathLogic
 			var result = form.ShowDialog();
 			if (result == DialogResult.OK)
 			{
-				foreach (var x in permuts)
+				if (permuts.Any((x) => x.Key == form.From))
+				//if (permuts.Contains(form.From))
 				{
-					if (x.Item1 == form.From)
-					{
-						MessageBox.Show("Замена с такого значения уже имеется!");
-						return;
-					}
+					MessageBox.Show("Замена с такого значения уже имеется!");
+					return;
 				}
-				permuts.Add(new Tuple<string, string>(form.From, form.To));
+				permuts.Add(new Pair<string, string>(form.From, form.To));
 				finals.Add(form.IsFinal);
 				permutsListBox.Items.Add(string.Format("{0} -> {1}", form.From, form.To));
 			}
@@ -108,27 +110,22 @@ namespace MathLogic
 			var index = permutsListBox.SelectedIndex;
 			if (index != -1)
 			{
-				var form = new AddPermutsForm(permuts[index].Item1, permuts[index].Item2, finals[index]);
+				var form = new AddPermutsForm(permuts[index].Key, permuts[index].Value, finals[index]);
 				var result = form.ShowDialog();
 				if (result == DialogResult.OK)
 				{
-					if ((form.From != permuts[index].Item1) || (form.To != permuts[index].Item2) || (form.IsFinal != finals[index]))
+					if (permuts.Any((x) => x.Key == form.From))
 					{
-						permuts.RemoveAt(index);
-						finals.RemoveAt(index);
-						permutsListBox.Items.RemoveAt(permutsListBox.SelectedIndex);
-						foreach (var x in permuts)
 						{
-							if (x.Item1 == form.From)
-							{
-								MessageBox.Show("Замена с такого значения уже имеется!");
-								return;
-							}
+							MessageBox.Show("Замена с такого значения уже имеется!");
+							return;
 						}
-						permuts.Add(new Tuple<string, string>(form.From, form.To));
-						finals.Add(form.IsFinal);
-						permutsListBox.Items.Add(string.Format("{0} -> {1}", form.From, form.To));
 					}
+					permuts[index].Key = form.From;
+					permuts[index].Value = form.To;
+					finals[index] = form.IsFinal;
+					permutsListBox.Items.RemoveAt(index);
+					permutsListBox.Items.Insert(index, string.Format(string.Format("{0} -> {1}", form.From, form.To)));
 				}
 			}
 		}
@@ -223,8 +220,8 @@ namespace MathLogic
 						alphabetListBox.Items.Add(a);
 					permuts = data.permuts;
                     permutsListBox.Items.Clear();
-					foreach (var p in permuts)
-						permutsListBox.Items.Add(string.Format("{0} -> {1}", p.Item1, p.Item2));
+					foreach (var p in permuts.Cast<DictionaryEntry>())
+						permutsListBox.Items.Add(string.Format("{0} -> {1}", p.Key, p.Value));
                     inputTextBox.Text = string.Empty;
 				}
 				catch
@@ -266,10 +263,22 @@ namespace MathLogic
 		}
 	}
 
+	class Pair<T1, T2>
+	{
+		public T1 Key { get; set; }
+		public T2 Value { get; set; }
+
+		public Pair(T1 key, T2 value)
+		{
+			Key = key;
+			Value = value;
+		}
+	}
+
 	class Data
 	{
 		public List<string> alphabet { get; set; }
-		public List<Tuple<string, string>> permuts { get; set; }
+		public List<Pair<string, string>> permuts { get; set; }
 		public List<bool> finals { get; set; }
 	}
 }

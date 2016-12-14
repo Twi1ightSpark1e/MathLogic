@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -10,12 +12,12 @@ namespace MathLogic
 		private delegate void InvokeWork();
 		public static bool Stop { get; set; }
 
-		public static bool CheckByAlphabet(List<string> alphabet, List<Tuple<string, string>> permuts, string text)
+		public static bool CheckByAlphabet(List<string> alphabet, List<Pair<string, string>> permuts, string text)
 		{
 			bool found;
-			foreach (Tuple<string, string> x in permuts)
+			foreach (Pair<string, string> x in permuts)
 			{
-				foreach (char c in x.Item1)
+				foreach (char c in x.Key)
 				{
 					found = false;
 					foreach (string a in alphabet)
@@ -32,7 +34,7 @@ namespace MathLogic
 						return false;
 					}
 				}
-				foreach (char c in x.Item2)
+				foreach (char c in x.Value)
 				{
 					found = false;
 					foreach (string a in alphabet)
@@ -110,7 +112,7 @@ namespace MathLogic
 			return (minpos == source.Length ? -1 : minpos);
 		}
 
-        public static string DoWork(StartForm form, List<Tuple<string, string>> permuts, List<bool> finals)
+        public static string DoWork(StartForm form, List<Pair<string, string>> permuts, List<bool> finals)
         {
             int step = 1;
             Stop = false;
@@ -125,16 +127,16 @@ namespace MathLogic
                 {
                     if (Stop)
                         break;
-                    pos = StringFind(text, x.Item1);
+                    pos = StringFind(text, x.Key);
                     if (pos != -1)
                     {
                         string before = text;
-                        if (x.Item2 == string.Empty)
-                            text = text.Remove(pos, x.Item1.Length);
-                        else if (x.Item1 == string.Empty)
-                            text = text.Insert(pos, x.Item2);
+                        if (x.Value == string.Empty)
+                            text = text.Remove(pos, x.Key.Length);
+                        else if (x.Key == string.Empty)
+                            text = text.Insert(pos, x.Value);
                         else
-                            text = text.Remove(pos, x.Item1.Length).Insert(pos, x.Item2);
+                            text = text.Remove(pos, x.Key.Length).Insert(pos, x.Value);
                         form.Invoke(new InvokeWork(() =>
                         {
                             form.stepsDataGridView.Rows.Add(new object[] { step, before, text });
@@ -143,7 +145,7 @@ namespace MathLogic
                         if (finals[i])
                             Stop = true;
                         found = true;
-                        if (x.Item1 == string.Empty)
+                        if (x.Key == string.Empty)
                             break;
                     }
                 }
