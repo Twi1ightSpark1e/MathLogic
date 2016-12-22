@@ -114,7 +114,7 @@ namespace MathLogic
 				var result = form.ShowDialog();
 				if (result == DialogResult.OK)
 				{
-					if (permuts.Any((x) => x.Key == form.From))
+					if (permuts.Any((x) => (permuts[index] != x) && (x.Key == form.From)))
 					{
 						{
 							MessageBox.Show("Замена с такого значения уже имеется!");
@@ -220,7 +220,7 @@ namespace MathLogic
 						alphabetListBox.Items.Add(a);
 					permuts = data.permuts;
                     permutsListBox.Items.Clear();
-					foreach (var p in permuts.Cast<DictionaryEntry>())
+					foreach (var p in permuts)
 						permutsListBox.Items.Add(string.Format("{0} -> {1}", p.Key, p.Value));
                     inputTextBox.Text = string.Empty;
 				}
