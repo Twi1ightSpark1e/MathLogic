@@ -13,8 +13,7 @@ namespace MathLogic
 	public partial class StartForm : Form
 	{
 		List<string> alphabet = new List<string>();
-		List<Pair<string, string>> permuts = new List<Pair<string, string>>();
-		//List<Tuple<string, string>> permuts = new List<Tuple<string, string>>();
+		List<Triple<string, string, bool>> permuts = new List<Triple<string, string, bool>>();
 		List<bool> finals = new List<bool>();
 		private delegate void InvokeWork();
 
@@ -64,13 +63,11 @@ namespace MathLogic
 			if (result == DialogResult.OK)
 			{
 				if (permuts.Any((x) => x.Key == form.From))
-				//if (permuts.Contains(form.From))
 				{
 					MessageBox.Show("Замена с такого значения уже имеется!");
 					return;
 				}
-				permuts.Add(new Pair<string, string>(form.From, form.To));
-				finals.Add(form.IsFinal);
+				permuts.Add(new Triple<string, string, bool>(form.From, form.To, form.IsFinal));
 				permutsListBox.Items.Add(string.Format("{0} -> {1}", form.From, form.To));
 			}
 		}
@@ -169,7 +166,7 @@ namespace MathLogic
 
 		private void DoWork()
 		{
-			MessageBox.Show("Результат: \"" + DirtyWork.DoWork(this, permuts, finals) + "\"");
+			MessageBox.Show("Результат: \"" + DirtyWork.DoWork(this, permuts) + "\"");
 			Invoke(new InvokeWork(() =>
 			{
 				addAlphabetButton.Enabled = addPermutsButton.Enabled = alphabetListBox.Enabled =
@@ -213,7 +210,6 @@ namespace MathLogic
 				try
 				{
 					var data = Newtonsoft.Json.JsonConvert.DeserializeObject<Data>(new StreamReader(ofd.FileName).ReadToEnd());
-					finals = data.finals;
 					alphabet = data.alphabet;
                     alphabetListBox.Items.Clear();
 					foreach (var a in alphabet)
@@ -243,7 +239,6 @@ namespace MathLogic
 				{
 					Data data = new Data();
 					data.alphabet = alphabet;
-					data.finals = finals;
 					data.permuts = permuts;
 					var serialized = Newtonsoft.Json.JsonConvert.SerializeObject(data);
 					StreamWriter sw = new StreamWriter(sfd.FileName, false);
@@ -263,22 +258,23 @@ namespace MathLogic
 		}
 	}
 
-	class Pair<T1, T2>
+	class Triple<T1, T2, T3>
 	{
 		public T1 Key { get; set; }
 		public T2 Value { get; set; }
+		public T3 Final { get; set; }
 
-		public Pair(T1 key, T2 value)
+		public Triple(T1 key, T2 value, T3 final)
 		{
 			Key = key;
 			Value = value;
+			Final = final;
 		}
 	}
 
 	class Data
 	{
 		public List<string> alphabet { get; set; }
-		public List<Pair<string, string>> permuts { get; set; }
-		public List<bool> finals { get; set; }
+		public List<Triple<string, string, bool>> permuts { get; set; }
 	}
 }

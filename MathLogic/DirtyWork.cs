@@ -12,10 +12,10 @@ namespace MathLogic
 		private delegate void InvokeWork();
 		public static bool Stop { get; set; }
 
-		public static bool CheckByAlphabet(List<string> alphabet, List<Pair<string, string>> permuts, string text)
+		public static bool CheckByAlphabet(List<string> alphabet, List<Triple<string, string, bool>> permuts, string text)
 		{
 			bool found;
-			foreach (Pair<string, string> x in permuts)
+			foreach (Triple<string, string, bool> x in permuts)
 			{
 				foreach (char c in x.Key)
 				{
@@ -112,7 +112,7 @@ namespace MathLogic
 			return (minpos == source.Length ? -1 : minpos);
 		}
 
-        public static string DoWork(StartForm form, List<Pair<string, string>> permuts, List<bool> finals)
+        public static string DoWork(StartForm form, List<Triple<string, string, bool>> permuts)
         {
             int step = 1;
             Stop = false;
@@ -142,7 +142,7 @@ namespace MathLogic
                             form.stepsDataGridView.Rows.Add(new object[] { step, before, text });
                         }));
                         step++;
-                        if (finals[i])
+                        if (x.Final)
                             Stop = true;
                         found = true;
                         if (x.Key == string.Empty)

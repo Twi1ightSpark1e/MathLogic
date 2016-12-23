@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Dynamic;
 using System.Linq;
 using System.Runtime.Remoting;
 using System.Text;
@@ -14,8 +15,18 @@ namespace MathLogic
 {
     public partial class ScriptForm : Form
     {
-        private Dictionary<string, dynamic> variables = new Dictionary<string, dynamic>();
-		public Hashtable types = new Hashtable()
+		internal static List<Triple<string, string, bool>> output = new List<Triple<string, string, bool>>();
+
+		[Flags]
+		enum TrimSymbols
+		{
+			Brackets = 0x1,
+			Apostrophes = 0x2,
+			Quotes = 0x4
+		}
+
+        private static Dictionary<string, dynamic> variables = new Dictionary<string, dynamic>();
+		public static Hashtable types = new Hashtable()
 		{
 			{ "int", "int64" },
 			{ "uint", "uint64" },
@@ -25,23 +36,41 @@ namespace MathLogic
 			{ "float", "single" },
 			{ "double", "double" }
 		};
-		private List<string> commands = new List<string>()
+		private static List<(string name, int args, Func<dynamic, dynamic> func)> commands = new List<(string name, int args, Func<dynamic, dynamic> func)>()
 		{
-			"push",
-			"show"
+			{ ("push", 3, new Func<dynamic, dynamic>((dynamic i) =>
+				{
+					string arg0 = i.Arg0;
+					string arg1 = i.Arg1;
+					string arg2 = i.Arg2;
+					ResolveExpression(ref arg0);
+					ResolveExpression(ref arg1);
+					ResolveExpression(ref arg2);
+					output.Add(new Triple<string, string, bool>(TrimPairs(arg0, TrimSymbols.Apostrophes | TrimSymbols.Quotes), TrimPairs(arg1, TrimSymbols.Apostrophes | TrimSymbols.Quotes), 
+						bool.Parse(arg2)));
+					return new object();
+				})) },
+			{ ("show", 1, new Func<dynamic, dynamic>((dynamic i) =>
+				{
+					string arg0 = i.Arg0;
+					ResolveExpression(ref arg0);
+					MessageBox.Show(arg0, "Сообщение скрипта");
+					return new object();
+				})) }
 		};
-		private List<(string name, int priority, Func<string, dynamic, dynamic, dynamic> function)> operators = new List<(string name, int priority, Func<string, object, object, dynamic> function)>()
+		private static List<(string name, int priority, Func<string, dynamic, dynamic, dynamic> function)> operators = new List<(string name, int priority, Func<string, object, object, dynamic> function)>()
 		{
 			{ ("+",  1, (string type, dynamic left, dynamic right) => left +  right) },
 			{ ("-",  1, (string type, dynamic left, dynamic right) => left -  right) },
 			{ ("*",  0, (string type, dynamic left, dynamic right) => left *  right) },
 			{ ("/",  0, (string type, dynamic left, dynamic right) => left /  right) },
 			{ ("%",  0, (string type, dynamic left, dynamic right) => left %  right) },
-			{ ("&",  2, (string type, dynamic left, dynamic right) => left &  right) },
-			{ ("|",  2, (string type, dynamic left, dynamic right) => left |  right) },
+			//{ ("&",  2, (string type, dynamic left, dynamic right) => left &  right) },
+			//{ ("|",  2, (string type, dynamic left, dynamic right) => left |  right) },
 			{ ("&&", 3, (string type, dynamic left, dynamic right) => left && right) },
 			{ ("||", 3, (string type, dynamic left, dynamic right) => left || right) },
 			{ ("=", -1, null) },
+			{ (",", -1, null) },
 			{ ("==", 3, (string type, dynamic left, dynamic right) => left == right) },
 			{ (">",  3, (string type, dynamic left, dynamic right) => left >  right) },
 			{ ("<",  3, (string type, dynamic left, dynamic right) => left <  right) },
@@ -62,12 +91,14 @@ namespace MathLogic
 
 		private dynamic GetInstance(string type, dynamic value)
 		{
+			if (type.ToLower() == "string")
+				return value as string;
 			var temp = Activator.CreateInstance(Type.GetType($"System.{type}", false, true));
-			temp = Convert.ChangeType(value, Type.GetType($"System.{type}", false, true));
+			temp = Convert.ChangeType(TrimPairs(value, TrimSymbols.Apostrophes | TrimSymbols.Quotes), Type.GetType($"System.{type}", false, true));
 			return temp;
 		}
 		
-		private string GetTypeByValue(string value)
+		private static string GetTypeByValue(string value)
 		{
 			if (value[0] == '\'')
 				return "char";
@@ -88,6 +119,15 @@ namespace MathLogic
 			return "error";
 		}
 
+		private static string SelectDestinationType(string left, string right)
+		{
+			string type1 = GetTypeByValue(left);
+			string type2 = GetTypeByValue(right);
+			if ((type1 == "string") || (type1 == "char") || (type2 == "string") || (type2 == "char"))
+				return "string";
+			else return type1;
+		}
+
 		private string ReadUntilSemicolon(string source, ref int start)
         {
 			string temp = string.Empty;
@@ -100,7 +140,7 @@ namespace MathLogic
             return temp;
         }
 
-		private string ReadOperator(string source, ref int start, bool isReverse = false)
+		private static string ReadOperator(string source, ref int start, bool isReverse = false)
 		{
 			string temp = string.Empty;
 			int i;
@@ -124,13 +164,24 @@ namespace MathLogic
 			return temp;
 		}
 
-		private string ReadOperand(string source, ref int start, bool isReverse = false)
+		private static string ReadOperand(string source, ref int start, bool isReverse = false)
 		{
 			string temp = string.Empty;
-			int i, bracketsCount = 0;
+			int i, bracketsCount = 0, symbolBracketsCount = 0;
 			for (i = start; (i < source.Length) && (i >= 0); i += (isReverse ? -1 : 1))
 			{
-				if (source[i] == '(')
+				if ((source[i] == '\"') || (source[i] == '\''))
+				{
+					symbolBracketsCount = ++symbolBracketsCount % 2;
+					temp += source[i];
+					continue;
+				}
+				else if (symbolBracketsCount != 0)
+				{
+					temp += source[i];
+					continue;
+				}
+				else if (source[i] == '(')
 				{
 					bracketsCount += (isReverse ? -1 : 1);
 					if (bracketsCount < 0)
@@ -170,7 +221,15 @@ namespace MathLogic
 			return temp;
 		}
 
-		private void RemoveUnnecessarySpaces(ref string value)
+		private static string ReadArgument(string source, ref int start)
+		{
+			string temp = string.Empty;
+			while ((start < source.Length) && (source[start] != ','))
+				temp += source[start++];
+			return temp;
+		}
+
+		private static void RemoveUnnecessarySpaces(ref string value)
 		{
 			int bracketsCount = 0;
 			int symbolBracketsCount = 0;
@@ -201,29 +260,33 @@ namespace MathLogic
 				}
 				else if ((value[i] == '\"') || (value[i] == '\''))
 				{
-					symbolBracketsCount = (symbolBracketsCount == 0 ? 1 : 0);
+					symbolBracketsCount = ++symbolBracketsCount % 2;
 				}
 			}
 		}
 
-		private string TrimBrackets(string source)
+		private static string TrimPairs(string source, TrimSymbols trim)
 		{
-			bool bracketsExists = false;
-			do
+			bool bracketsExists = true;
+			while ((bracketsExists) && (source.Length > 0))
 			{
-				bracketsExists = (source[0] == '(') && (source[source.Length - 1] == ')');
+				bracketsExists = false;
+				if (trim.HasFlag(TrimSymbols.Apostrophes))
+					bracketsExists = bracketsExists || (source[0] == '\'') && (source[source.Length - 1] == '\'');
+				if (trim.HasFlag(TrimSymbols.Quotes))
+					bracketsExists = bracketsExists || (source[0] == '\"') && (source[source.Length - 1] == '\"');
+				if (trim.HasFlag(TrimSymbols.Brackets))
+					bracketsExists = bracketsExists || (source[0] == '(') && (source[source.Length - 1] == ')');
 				if (bracketsExists)
-				{
 					source = source.Substring(1, source.Length - 2);
-				}
 			}
-			while (bracketsExists);
 			return source;
 		}
 
-		private void ResolveExpression(ref string expression)
+		private static void ResolveExpression(ref string expression)
 		{
 			RemoveUnnecessarySpaces(ref expression);
+			expression = TrimPairs(expression, TrimSymbols.Brackets);
 			foreach (var variable in variables)
 			{
 				if (expression == variable.Key)
@@ -243,17 +306,17 @@ namespace MathLogic
 				do
 				{
 					pos = DirtyWork.StringFindAny(expression, opsNames.ToArray(), out int index);
-					if (pos != -1)
+					if (pos > 0)
 					{
 						int position = DirtyWork.StringFind(expression, expression.Substring(pos, opsNames[index].Length));
 						//Check for bitwise operator found instead of logical
-						int t = position;
-						string tString = ReadOperator(expression, ref t);
-						if (tString != opsNames[index])
-						{
-							opsNames.RemoveAt(index);
-							continue;
-						}
+						//int t = position;
+						//string tString = ReadOperator(expression, ref t);
+						//if (tString != opsNames[index])
+						//{
+						//	opsNames.RemoveAt(index);
+						//	continue;
+						//}
 
 						string exp = expression;
 						var func = (from x in ops
@@ -265,8 +328,8 @@ namespace MathLogic
 						temp = position + (opsNames[index].Length - 1) + 1;
 						string right = ReadOperand(expression, ref temp, false);
 						expression = expression.Remove(insert, left.Length + right.Length + opsNames[index].Length);
-						left = TrimBrackets(left);
-						right = TrimBrackets(right);
+						left = TrimPairs(left, TrimSymbols.Brackets);
+						right = TrimPairs(right, TrimSymbols.Brackets);
 						int p = -1;
 						do
 						{
@@ -281,12 +344,12 @@ namespace MathLogic
 						while (p != -1);
 						ResolveExpression(ref left);
 						ResolveExpression(ref right);
-						dynamic l = Convert.ChangeType(left, Type.GetType($"System.{types[GetTypeByValue(left)].ToString()}", false, true));
-						dynamic r = Convert.ChangeType(right, Type.GetType($"System.{types[GetTypeByValue(right)].ToString()}", false, true));
-						expression = expression.Insert(insert, func(GetTypeByValue(left), l, r).ToString());
+						dynamic l = Convert.ChangeType(TrimPairs(left, TrimSymbols.Apostrophes | TrimSymbols.Quotes), Type.GetType($"System.{types[GetTypeByValue(left)].ToString()}", false, true));
+						dynamic r = Convert.ChangeType(TrimPairs(right, TrimSymbols.Apostrophes | TrimSymbols.Quotes), Type.GetType($"System.{types[GetTypeByValue(right)].ToString()}", false, true));
+						expression = expression.Insert(insert, func(SelectDestinationType(left, right), l, r).ToString());
 					}
 				}
-				while (pos != -1);
+				while (pos > 0);
 			}
 		}
 
@@ -315,7 +378,7 @@ namespace MathLogic
 							if ((typename.Key.ToString() == "float") || (typename.Key.ToString() == "double"))
 								value = value.Replace('.', ',');
 							ResolveExpression(ref value);
-							variables.Add(varname, GetInstance(typename.Value.ToString(), value));
+							variables.Add(varname, GetInstance(typename.Value.ToString(), TrimPairs(value, TrimSymbols.Apostrophes | TrimSymbols.Quotes)));
 						}
 						else variables.Add(varname, GetInstance(typename.Value.ToString())); //Variable not initialized
 						varFound = true;
@@ -349,18 +412,43 @@ namespace MathLogic
 				}
 				if (assigmentFound)
 					continue;
+				//Search for methods
+				bool methodFound = false;
+				foreach (var method in commands)
+				{
+					if (command.StartsWith(method.name))
+					{
+						command = command.Remove(0, method.name.Length);
+						command = command.Substring(1, command.Length - 2);
+						int temp = 0;
+						dynamic data = new ExpandoObject();
+						var dataDict = (IDictionary<string, object>)data;
+						for (int i = 0; i < method.args; i++)
+						{
+							string arg = ReadArgument(command, ref temp);
+							temp++; //To skip comma
+							dataDict.Add($"Arg{i}", arg);
+						}
+						method.func(data);
+						methodFound = true;
+					}
+				}
+				if (methodFound)
+					continue;
 			}
 		}
 
         private void executeButton_Click(object sender, EventArgs e)
         {
 			variables.Clear();
+			output.Clear();
 			DoScript();
         }
 
         private void checkButton_Click(object sender, EventArgs e)
         {
 			variables.Clear();
+			output.Clear();
 			DoScript();
         }
     }
