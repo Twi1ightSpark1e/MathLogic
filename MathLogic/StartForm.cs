@@ -14,7 +14,6 @@ namespace MathLogic
 	{
 		List<string> alphabet = new List<string>();
 		List<Triple<string, string, bool>> permuts = new List<Triple<string, string, bool>>();
-		List<bool> finals = new List<bool>();
 		private delegate void InvokeWork();
 
 		Thread work;
@@ -107,7 +106,7 @@ namespace MathLogic
 			var index = permutsListBox.SelectedIndex;
 			if (index != -1)
 			{
-				var form = new AddPermutsForm(permuts[index].Key, permuts[index].Value, finals[index]);
+				var form = new AddPermutsForm(permuts[index].Key, permuts[index].Value, permuts[index].Final);
 				var result = form.ShowDialog();
 				if (result == DialogResult.OK)
 				{
@@ -120,7 +119,7 @@ namespace MathLogic
 					}
 					permuts[index].Key = form.From;
 					permuts[index].Value = form.To;
-					finals[index] = form.IsFinal;
+					permuts[index].Final = form.IsFinal;
 					permutsListBox.Items.RemoveAt(index);
 					permutsListBox.Items.Insert(index, string.Format(string.Format("{0} -> {1}", form.From, form.To)));
 				}
@@ -132,7 +131,7 @@ namespace MathLogic
 			if (e.Index == -1)
 				return;
 			e.DrawBackground();
-			var brush = (finals[e.Index] ? Brushes.Red : Brushes.Black);
+			var brush = (permuts[e.Index].Final ? Brushes.Red : Brushes.Black);
 			e.Graphics.DrawString(
 				((ListBox)sender).Items[e.Index].ToString(),
 				e.Font, brush, e.Bounds,
@@ -193,7 +192,6 @@ namespace MathLogic
 		private void deletePermutsButton_Click(Object sender, EventArgs e)
 		{
 			permuts.RemoveAt(permutsListBox.SelectedIndex);
-			finals.RemoveAt(permutsListBox.SelectedIndex);
 			permutsListBox.Items.RemoveAt(permutsListBox.SelectedIndex);
 			if (permutsListBox.Items.Count != 0)
 				permutsListBox.SelectedIndex = 0;

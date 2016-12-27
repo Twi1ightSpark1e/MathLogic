@@ -1,1 +1,1 @@
-{"alphabet":["10|"],"permuts":[{"Item1":"1","Item2":"0|"},{"Item1":"|0","Item2":"0||"},{"Item1":"0","Item2":""}],"finals":[false,false,false]}
+{"alphabet":["10|"],"permuts":[{"Key":"1","Value":"0|","Final":false},{"Key":"|0","Value":"0||","Final":false},{"Key":"0","Value":"","Final":false}]}
