@@ -443,6 +443,11 @@ namespace MathLogic
 			variables.Clear();
 			output.Clear();
 			DoScript();
+			string permuts = "Следующие замены будут добавлены: " + Environment.NewLine;
+			permuts = output.Aggregate(permuts, (temp, x) => temp + string.Format("{0} ->{1} {2}", x.Key, x.Final ? "." : string.Empty, x.Value) + Environment.NewLine);
+			MessageBox.Show(permuts);
+			StartForm.AddPermutsFromScript(output);
+			DialogResult = DialogResult.OK;
         }
 
         private void checkButton_Click(object sender, EventArgs e)
@@ -450,6 +455,15 @@ namespace MathLogic
 			variables.Clear();
 			output.Clear();
 			DoScript();
-        }
-    }
+			string permuts = "Следующие замены будут добавлены: " + Environment.NewLine;
+			permuts = output.Aggregate(permuts, (temp, x) => temp + string.Format("{0} ->{1} {2}", x.Key, x.Final ? "." : string.Empty, x.Value) + Environment.NewLine);
+			MessageBox.Show(permuts);
+		}
+
+		private void ScriptForm_FormClosing(object sender, FormClosingEventArgs e)
+		{
+			if (e.CloseReason != CloseReason.None)
+				DialogResult = DialogResult.Cancel;
+		}
+	}
 }

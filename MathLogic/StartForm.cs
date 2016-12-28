@@ -12,8 +12,9 @@ namespace MathLogic
 {
 	public partial class StartForm : Form
 	{
-		List<string> alphabet = new List<string>();
-		List<Triple<string, string, bool>> permuts = new List<Triple<string, string, bool>>();
+		public static StartForm LastInstance { get; private set; }
+		private static List<string> alphabet = new List<string>();
+		private static List<Triple<string, string, bool>> permuts = new List<Triple<string, string, bool>>();
 		private delegate void InvokeWork();
 
 		Thread work;
@@ -21,6 +22,7 @@ namespace MathLogic
 		public StartForm()
 		{
 			InitializeComponent();
+			LastInstance = this;
 		}
 
 		private void addAlphabetButton_Click(object sender, EventArgs e)
@@ -67,7 +69,7 @@ namespace MathLogic
 					return;
 				}
 				permuts.Add(new Triple<string, string, bool>(form.From, form.To, form.IsFinal));
-				permutsListBox.Items.Add(string.Format("{0} -> {1}", form.From, form.To));
+				permutsListBox.Items.Add(string.Format("{0} ->{1} {2}", form.From, (form.IsFinal ? "." : string.Empty), form.To));
 			}
 		}
 
@@ -121,22 +123,9 @@ namespace MathLogic
 					permuts[index].Value = form.To;
 					permuts[index].Final = form.IsFinal;
 					permutsListBox.Items.RemoveAt(index);
-					permutsListBox.Items.Insert(index, string.Format(string.Format("{0} -> {1}", form.From, form.To)));
+					permutsListBox.Items.Insert(index, string.Format("{0} ->{1} {2}", form.From, (form.IsFinal ? "." : string.Empty), form.To));
 				}
 			}
-		}
-
-		private void permutsListBox_DrawItem(Object sender, DrawItemEventArgs e)
-		{
-			if (e.Index == -1)
-				return;
-			e.DrawBackground();
-			var brush = (permuts[e.Index].Final ? Brushes.Red : Brushes.Black);
-			e.Graphics.DrawString(
-				((ListBox)sender).Items[e.Index].ToString(),
-				e.Font, brush, e.Bounds,
-				StringFormat.GenericDefault);
-			e.DrawFocusRectangle();
 		}
 
 		private void startButton_Click(Object sender, EventArgs e)
@@ -215,7 +204,7 @@ namespace MathLogic
 					permuts = data.permuts;
                     permutsListBox.Items.Clear();
 					foreach (var p in permuts)
-						permutsListBox.Items.Add(string.Format("{0} -> {1}", p.Key, p.Value));
+						permutsListBox.Items.Add(string.Format("{0} ->{1} {2}", p.Key, (p.Final ? "." : string.Empty), p.Value));
                     inputTextBox.Text = string.Empty;
 				}
 				catch
@@ -253,6 +242,15 @@ namespace MathLogic
 		private void выходToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			Application.Exit();
+		}
+		
+		internal static void AddPermutsFromScript(List<Triple<string, string, bool>> list)
+		{
+			foreach (var element in list)
+			{
+				permuts.Add(new Triple<string, string, bool>(element.Key, element.Value, element.Final));
+				LastInstance.permutsListBox.Items.Add(string.Format("{0} ->{1} {2}", element.Key, (element.Final ? "." : string.Empty) ,element.Value));
+			}
 		}
 	}
 

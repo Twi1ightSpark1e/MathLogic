@@ -85,6 +85,7 @@
 			this.Controls.Add(this.scriptRichTextBox);
 			this.Name = "ScriptForm";
 			this.Text = "ScriptForm";
+			this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.ScriptForm_FormClosing);
 			this.ResumeLayout(false);
 
         }

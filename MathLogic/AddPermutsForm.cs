@@ -55,7 +55,10 @@ namespace MathLogic
         private void scriptButton_Click(object sender, EventArgs e)
         {
             ScriptForm sf = new ScriptForm();
-            sf.Show();
+            if (sf.ShowDialog() == DialogResult.OK)
+			{
+				DialogResult = DialogResult.Cancel;
+			}
         }
     }
 }

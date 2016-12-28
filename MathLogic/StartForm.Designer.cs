@@ -28,9 +28,9 @@
         /// </summary>
         private void InitializeComponent()
         {
-			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle12 = new System.Windows.Forms.DataGridViewCellStyle();
-			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle10 = new System.Windows.Forms.DataGridViewCellStyle();
-			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle11 = new System.Windows.Forms.DataGridViewCellStyle();
+			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
+			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
+			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
 			this.alphabetLabel = new System.Windows.Forms.Label();
 			this.permutsLabel = new System.Windows.Forms.Label();
 			this.alphabetListBox = new System.Windows.Forms.ListBox();
@@ -85,13 +85,11 @@
 			// 
 			// permutsListBox
 			// 
-			this.permutsListBox.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
 			this.permutsListBox.FormattingEnabled = true;
 			this.permutsListBox.Location = new System.Drawing.Point(297, 51);
 			this.permutsListBox.Name = "permutsListBox";
 			this.permutsListBox.Size = new System.Drawing.Size(120, 121);
 			this.permutsListBox.TabIndex = 3;
-			this.permutsListBox.DrawItem += new System.Windows.Forms.DrawItemEventHandler(this.permutsListBox_DrawItem);
 			this.permutsListBox.SelectedIndexChanged += new System.EventHandler(this.permutsListBox_SelectedIndexChanged);
 			this.permutsListBox.DoubleClick += new System.EventHandler(this.permutsListBox_DoubleClick);
 			// 
@@ -182,8 +180,8 @@
 			this.stepsDataGridView.Name = "stepsDataGridView";
 			this.stepsDataGridView.ReadOnly = true;
 			this.stepsDataGridView.RowHeadersVisible = false;
-			dataGridViewCellStyle12.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
-			this.stepsDataGridView.RowsDefaultCellStyle = dataGridViewCellStyle12;
+			dataGridViewCellStyle3.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+			this.stepsDataGridView.RowsDefaultCellStyle = dataGridViewCellStyle3;
 			this.stepsDataGridView.RowTemplate.DefaultCellStyle.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
 			this.stepsDataGridView.RowTemplate.ReadOnly = true;
 			this.stepsDataGridView.ShowEditingIcon = false;
@@ -201,8 +199,8 @@
 			// 
 			// fromColumn
 			// 
-			dataGridViewCellStyle10.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
-			this.fromColumn.DefaultCellStyle = dataGridViewCellStyle10;
+			dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+			this.fromColumn.DefaultCellStyle = dataGridViewCellStyle1;
 			this.fromColumn.Frozen = true;
 			this.fromColumn.HeaderText = "Было";
 			this.fromColumn.Name = "fromColumn";
@@ -211,8 +209,8 @@
 			// 
 			// toColumn
 			// 
-			dataGridViewCellStyle11.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
-			this.toColumn.DefaultCellStyle = dataGridViewCellStyle11;
+			dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+			this.toColumn.DefaultCellStyle = dataGridViewCellStyle2;
 			this.toColumn.Frozen = true;
 			this.toColumn.HeaderText = "Стало";
 			this.toColumn.Name = "toColumn";
@@ -243,21 +241,21 @@
 			// импортToolStripMenuItem
 			// 
 			this.импортToolStripMenuItem.Name = "импортToolStripMenuItem";
-			this.импортToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+			this.импортToolStripMenuItem.Size = new System.Drawing.Size(119, 22);
 			this.импортToolStripMenuItem.Text = "Импорт";
 			this.импортToolStripMenuItem.Click += new System.EventHandler(this.импортToolStripMenuItem_Click);
 			// 
 			// экспортToolStripMenuItem
 			// 
 			this.экспортToolStripMenuItem.Name = "экспортToolStripMenuItem";
-			this.экспортToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+			this.экспортToolStripMenuItem.Size = new System.Drawing.Size(119, 22);
 			this.экспортToolStripMenuItem.Text = "Экспорт";
 			this.экспортToolStripMenuItem.Click += new System.EventHandler(this.экспортToolStripMenuItem_Click);
 			// 
 			// выходToolStripMenuItem
 			// 
 			this.выходToolStripMenuItem.Name = "выходToolStripMenuItem";
-			this.выходToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+			this.выходToolStripMenuItem.Size = new System.Drawing.Size(119, 22);
 			this.выходToolStripMenuItem.Text = "Выход";
 			this.выходToolStripMenuItem.Click += new System.EventHandler(this.выходToolStripMenuItem_Click);
 			// 
