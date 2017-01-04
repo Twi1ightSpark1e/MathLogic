@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Drawing;
 using System.Dynamic;
 using System.Linq;
-using System.Runtime.Remoting;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace MathLogic
@@ -65,8 +60,9 @@ namespace MathLogic
 			{ ("*",  0, (string type, dynamic left, dynamic right) => left *  right) },
 			{ ("/",  0, (string type, dynamic left, dynamic right) => left /  right) },
 			{ ("%",  0, (string type, dynamic left, dynamic right) => left %  right) },
-			//{ ("&",  2, (string type, dynamic left, dynamic right) => left &  right) },
-			//{ ("|",  2, (string type, dynamic left, dynamic right) => left |  right) },
+			{ ("&",  2, (string type, dynamic left, dynamic right) => left &  right) },
+			{ ("|",  2, (string type, dynamic left, dynamic right) => left |  right) },
+			{ ("^",  2, (string type, dynamic left, dynamic right) => left ^  right) },
 			{ ("&&", 3, (string type, dynamic left, dynamic right) => left && right) },
 			{ ("||", 3, (string type, dynamic left, dynamic right) => left || right) },
 			{ ("=", -1, null) },
@@ -229,6 +225,29 @@ namespace MathLogic
 			return temp;
 		}
 
+		private static int FindOperator(string source, string[] operators, out int index)
+		{
+			int symbolBracketsCount = 0;
+			for (int i = 0; i < source.Length; i++)
+			{
+				if ((source[i] == '\"') || (source[i] == '\''))
+				{
+					symbolBracketsCount = ++symbolBracketsCount % 2;
+					continue;
+				}
+				if (symbolBracketsCount != 0)
+					continue;
+				for (int j = 0; j < operators.Count(); j++)
+					if ((i + operators[j].Length <= source.Length) && (source.Substring(i, operators[j].Length) == operators[j]))
+					{
+						index = j;
+						return i;
+					}
+			}
+			index = -1;
+			return -1;
+		}
+
 		private static void RemoveUnnecessarySpaces(ref string value)
 		{
 			int bracketsCount = 0;
@@ -305,18 +324,18 @@ namespace MathLogic
 				int pos = -1;
 				do
 				{
-					pos = DirtyWork.StringFindAny(expression, opsNames.ToArray(), out int index);
+					pos = FindOperator(expression, opsNames.ToArray(), out int index);
 					if (pos > 0)
 					{
 						int position = DirtyWork.StringFind(expression, expression.Substring(pos, opsNames[index].Length));
 						//Check for bitwise operator found instead of logical
-						//int t = position;
-						//string tString = ReadOperator(expression, ref t);
-						//if (tString != opsNames[index])
-						//{
-						//	opsNames.RemoveAt(index);
-						//	continue;
-						//}
+						int t = position;
+						string tString = ReadOperator(expression, ref t);
+						if (tString != opsNames[index])
+						{
+							opsNames.RemoveAt(index);
+							continue;
+						}
 
 						string exp = expression;
 						var func = (from x in ops
