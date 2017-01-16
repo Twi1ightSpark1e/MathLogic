@@ -8,7 +8,7 @@ using System.Windows.Forms;
 
 namespace MathLogic
 {
-    public partial class ScriptForm : Form
+	public partial class ScriptForm : Form
     {
 		internal static List<Triple<string, string, bool>> output = new List<Triple<string, string, bool>>();
 
@@ -21,7 +21,8 @@ namespace MathLogic
 		}
 
         private static Dictionary<string, dynamic> variables = new Dictionary<string, dynamic>();
-		public static Hashtable types = new Hashtable()
+
+	    private static Hashtable types = new Hashtable()
 		{
 			{ "int", "int64" },
 			{ "uint", "uint64" },
@@ -31,9 +32,9 @@ namespace MathLogic
 			{ "float", "single" },
 			{ "double", "double" }
 		};
-		private static List<(string name, int args, Func<dynamic, dynamic> func)> commands = new List<(string name, int args, Func<dynamic, dynamic> func)>()
+		private static List<(string name, int args, Action<dynamic> func)> commands = new List<(string name, int args, Action<dynamic> func)>()
 		{
-			{ ("push", 3, new Func<dynamic, dynamic>((dynamic i) =>
+			{ ("push", 3, new Action<dynamic>((dynamic i) =>
 				{
 					string arg0 = i.Arg0;
 					string arg1 = i.Arg1;
@@ -43,14 +44,12 @@ namespace MathLogic
 					ResolveExpression(ref arg2);
 					output.Add(new Triple<string, string, bool>(TrimPairs(arg0, TrimSymbols.Apostrophes | TrimSymbols.Quotes), TrimPairs(arg1, TrimSymbols.Apostrophes | TrimSymbols.Quotes), 
 						bool.Parse(arg2)));
-					return new object();
 				})) },
-			{ ("show", 1, new Func<dynamic, dynamic>((dynamic i) =>
+			{ ("show", 1, new Action<dynamic>((dynamic i) =>
 				{
 					string arg0 = i.Arg0;
 					ResolveExpression(ref arg0);
-					MessageBox.Show(arg0, "Сообщение скрипта");
-					return new object();
+					MessageBox.Show(TrimPairs(arg0, TrimSymbols.Apostrophes | TrimSymbols.Quotes), "Сообщение скрипта");
 				})) }
 		};
 		private static List<(string name, int priority, Func<string, dynamic, dynamic, dynamic> function)> operators = new List<(string name, int priority, Func<string, object, object, dynamic> function)>()
@@ -124,17 +123,75 @@ namespace MathLogic
 			else return type1;
 		}
 
-		private string ReadUntilSemicolon(string source, ref int start)
+		private string ReadCommand(string source, ref int start)
         {
 			string temp = string.Empty;
-			int i;
-            for (i = start; i < source.Length; i++)
-                if (source[i] != ';')
-                    temp += source[i];
-                else break;
-			start = i;
+	        int i, symbolBracketsCount = 0;
+	        for (i = start; i < source.Length; i++)
+			{ 
+		        if ((source[i] == '\"') || (source[i] == '\''))
+				{
+					symbolBracketsCount = ++symbolBracketsCount % 2;
+					temp += source[i];
+					continue;
+				}
+				else if (symbolBracketsCount != 0)
+				{
+					temp += source[i];
+					continue;
+				}
+				else if ((source[i] != ';') && (source[i] != '{') && (source[i] != '}'))
+			        temp += source[i];
+				else break;
+				if (source[i] == ')')
+					break;
+			}
+	        start = i;
             return temp;
         }
+
+	    private string ReadCommandsInBrackets(string source, ref int start)
+	    {
+			string temp = string.Empty;
+			int i, symbolBracketsCount = 0, opBracketsCount = 0;
+
+		    while (source[start] == '\n' || source[start] == '\t' || source[start] == ' ')
+			    start++;
+		    if (source[start] != '{')
+			    return ReadCommand(source, ref start);
+
+			for (i = start; i < source.Length; i++)
+			{
+				if ((source[i] == '\"') || (source[i] == '\''))
+				{
+					symbolBracketsCount = ++symbolBracketsCount % 2;
+					temp += source[i];
+					continue;
+				}
+				else if (symbolBracketsCount != 0)
+				{
+					temp += source[i];
+					continue;
+				}
+				else if (source[i] == '{')
+				{
+					opBracketsCount++;
+					temp += source[i];
+				}
+				else if (source[i] != '}')
+					temp += source[i];
+				else if (source[i] == '}')
+				{
+					opBracketsCount--;
+					if (opBracketsCount <= 0)
+						break;
+					else temp += source[i];
+				}
+				else break;
+			}
+			start = i;
+			return temp;
+		}
 
 		private static string ReadOperator(string source, ref int start, bool isReverse = false)
 		{
@@ -260,7 +317,7 @@ namespace MathLogic
 					skipNext = false;
 					continue;
 				}
-				if ((symbolBracketsCount == 0) && (!skipNext) && (value[i] == ' '))
+				if ((symbolBracketsCount == 0) && (!skipNext) && ((value[i] == ' ') || (value[i] == '\n') || (value[i] == '\t')))
 				{
 					value = value.Remove(i, 1);
 					i--;
@@ -363,8 +420,10 @@ namespace MathLogic
 						while (p != -1);
 						ResolveExpression(ref left);
 						ResolveExpression(ref right);
-						dynamic l = Convert.ChangeType(TrimPairs(left, TrimSymbols.Apostrophes | TrimSymbols.Quotes), Type.GetType($"System.{types[GetTypeByValue(left)].ToString()}", false, true));
-						dynamic r = Convert.ChangeType(TrimPairs(right, TrimSymbols.Apostrophes | TrimSymbols.Quotes), Type.GetType($"System.{types[GetTypeByValue(right)].ToString()}", false, true));
+						left = TrimPairs(left, TrimSymbols.Apostrophes | TrimSymbols.Quotes);
+						right = TrimPairs(right, TrimSymbols.Apostrophes | TrimSymbols.Quotes);
+						dynamic l = GetTypeByValue(left).ToLower() == "string" ? left : Convert.ChangeType(left, Type.GetType($"System.{types[GetTypeByValue(left)].ToString()}", false, true));
+						dynamic r = GetTypeByValue(right).ToLower() == "string" ? right : Convert.ChangeType(right, Type.GetType($"System.{types[GetTypeByValue(right)].ToString()}", false, true));
 						expression = expression.Insert(insert, func(SelectDestinationType(left, right), l, r).ToString());
 					}
 				}
@@ -372,87 +431,118 @@ namespace MathLogic
 			}
 		}
 
-        private void DoScript()
-        {
-            int position = 0;
-            while (position < scriptRichTextBox.Text.Length-1)
-            {
-                string command = ReadUntilSemicolon(scriptRichTextBox.Text, ref position).
-					Replace('\r', new char()).Replace('\n', new char()).Replace('\t', new char()).Trim(new char[] { '\0' });
-				position++; //To skip semicolon
-				//Search for defining variables
-				bool varFound = false;
-				foreach (DictionaryEntry typename in types)
+	    private bool IsVariableDefining(string command)
+	    {
+			foreach (DictionaryEntry typename in types)
+			{
+				if (command.StartsWith(typename.Key.ToString()))
 				{
-					if (command.StartsWith(typename.Key.ToString()))
+					int temp = 0;
+					command = command.Remove(0, typename.Key.ToString().Length);
+					string varname = ReadOperand(command, ref temp);
+					string op = ReadOperator(command, ref temp);
+					if (op == "=") //Variable defined and initialized
 					{
-						int temp = 0;
-						command = command.Remove(0, typename.Key.ToString().Length);
-						string varname = ReadOperand(command, ref temp);
-						string op = ReadOperator(command, ref temp);
-						if (op == "=") //Variable defined and initialized
-						{
-							command = command.Remove(0, command.IndexOf('=') + 1);
-							string value = command;
-							if ((typename.Key.ToString() == "float") || (typename.Key.ToString() == "double"))
-								value = value.Replace('.', ',');
-							ResolveExpression(ref value);
-							variables.Add(varname, GetInstance(typename.Value.ToString(), TrimPairs(value, TrimSymbols.Apostrophes | TrimSymbols.Quotes)));
-						}
-						else variables.Add(varname, GetInstance(typename.Value.ToString())); //Variable not initialized
-						varFound = true;
-						break;
+						command = command.Remove(0, command.IndexOf('=') + 1);
+						string value = command;
+						if ((typename.Key.ToString() == "float") || (typename.Key.ToString() == "double"))
+							value = value.Replace('.', ',');
+						ResolveExpression(ref value);
+						variables.Add(varname, GetInstance(typename.Value.ToString(), TrimPairs(value, TrimSymbols.Apostrophes | TrimSymbols.Quotes)));
+					}
+					else variables.Add(varname, GetInstance(typename.Value.ToString())); //Variable not initialized
+					return true;
+				}
+			}
+		    return false;
+	    }
+
+	    private bool IsAssigment(string command)
+	    {
+			for (int i = 0; i < variables.Count; i++)
+			{
+				var varname = variables.ElementAt(i).Key;
+				if (command.StartsWith(varname))
+				{
+					int temp = 0;
+					command = command.Remove(0, varname.Length);
+					string op = ReadOperator(command, ref temp);
+					if (op == "=")
+					{
+						command = command.Remove(0, command.IndexOf('=') + 1);
+						string value = command;
+						if ((GetTypeByValue(varname) == "float") || (GetTypeByValue(varname) == "double"))
+							value = value.Replace('.', ',');
+						ResolveExpression(ref value);
+						variables[varname] = Convert.ChangeType(TrimPairs(value, TrimSymbols.Apostrophes | TrimSymbols.Quotes), Type.GetType($"System.{GetTypeByValue(varname)}", false, true));
+						return true;
 					}
 				}
-				if (varFound)
+			}
+		    return false;
+	    }
+
+	    private bool IsMethod(string command)
+	    {
+			foreach (var method in commands)
+			{
+				if (command.StartsWith(method.name))
+				{
+					command = command.Remove(0, method.name.Length);
+					command = command.Substring(1, command.Length - 2);
+					int temp = 0;
+					dynamic data = new ExpandoObject();
+					var dataDict = (IDictionary<string, object>)data;
+					for (int i = 0; i < method.args; i++)
+					{
+						string arg = ReadArgument(command, ref temp);
+						temp++; //To skip comma
+						dataDict.Add($"Arg{i}", arg);
+					}
+					method.func(data);
+					return true;
+				}
+			}
+		    return false;
+	    }
+
+	    private bool IsCondition(string text, string command, ref int position)
+	    {
+		    if (command.StartsWith("if"))
+		    {
+			    command = command.Remove(0, 2).Trim();
+			    string cmds = command.Last() == ';'
+				    ? ReadCommand(text, ref position)
+				    : ReadCommandsInBrackets(text, ref position);
+			    ResolveExpression(ref command);
+			    bool.TryParse(command, out bool result);
+			    if (result)
+			    {
+				    DoScript(cmds);
+				    return true;
+			    }
+		    }
+		    return false;
+	    }
+
+        private void DoScript(string text)
+        {
+	        int position = 0;
+            while (position < text.Length-1)
+            {
+                string command = ReadCommand(text, ref position).
+					Replace('\r', new char()).Replace('\n', new char()).Replace('\t', new char()).Trim('\0', ' ');
+				position++; //To skip semicolon
+	            //Search for defining variables
+				if (IsVariableDefining(command))
 					continue;
 				//Search for assigments
-				bool assigmentFound = false;
-				for (int i = 0; i < variables.Count; i++)
-				{
-					var varname = variables.ElementAt(i).Key;
-					if (command.StartsWith(varname))
-					{
-						int temp = 0;
-						command = command.Remove(0, varname.Length);
-						string op = ReadOperator(command, ref temp);
-						if (op == "=")
-						{
-							command = command.Remove(0, command.IndexOf('=') + 1);
-							string value = command;
-							if ((GetTypeByValue(varname) == "float") || (GetTypeByValue(varname) == "double"))
-								value = value.Replace('.', ',');
-							ResolveExpression(ref value);
-							variables[varname] = Convert.ChangeType(value, Type.GetType($"System.{GetTypeByValue(varname)}", false, true));
-							assigmentFound = true; 
-						}
-						else continue; //wutifak do u want from me? o_O
-					}
-				}
-				if (assigmentFound)
+				if (IsAssigment(command))
 					continue;
 				//Search for methods
-				bool methodFound = false;
-				foreach (var method in commands)
-				{
-					if (command.StartsWith(method.name))
-					{
-						command = command.Remove(0, method.name.Length);
-						command = command.Substring(1, command.Length - 2);
-						int temp = 0;
-						dynamic data = new ExpandoObject();
-						var dataDict = (IDictionary<string, object>)data;
-						for (int i = 0; i < method.args; i++)
-						{
-							string arg = ReadArgument(command, ref temp);
-							temp++; //To skip comma
-							dataDict.Add($"Arg{i}", arg);
-						}
-						method.func(data);
-						methodFound = true;
-					}
-				}
-				if (methodFound)
+				if (IsMethod(command))
+					continue;
+	            if (IsCondition(text, command, ref position))
 					continue;
 			}
 		}
@@ -461,9 +551,9 @@ namespace MathLogic
         {
 			variables.Clear();
 			output.Clear();
-			DoScript();
+			DoScript(scriptRichTextBox.Text);
 			string permuts = "Следующие замены будут добавлены: " + Environment.NewLine;
-			permuts = output.Aggregate(permuts, (temp, x) => temp + string.Format("{0} ->{1} {2}", x.Key, x.Final ? "." : string.Empty, x.Value) + Environment.NewLine);
+			permuts = output.Aggregate(permuts, (temp, x) => temp + $"{x.Key} ->{(x.Final ? "." : string.Empty)} {x.Value}" + Environment.NewLine);
 			MessageBox.Show(permuts);
 			StartForm.AddPermutsFromScript(output);
 			DialogResult = DialogResult.OK;
@@ -473,9 +563,9 @@ namespace MathLogic
         {
 			variables.Clear();
 			output.Clear();
-			DoScript();
+			DoScript(scriptRichTextBox.Text);
 			string permuts = "Следующие замены будут добавлены: " + Environment.NewLine;
-			permuts = output.Aggregate(permuts, (temp, x) => temp + string.Format("{0} ->{1} {2}", x.Key, x.Final ? "." : string.Empty, x.Value) + Environment.NewLine);
+			permuts = output.Aggregate(permuts, (temp, x) => temp + $"{x.Key} ->{(x.Final ? "." : string.Empty)} {x.Value}" + Environment.NewLine);
 			MessageBox.Show(permuts);
 		}
 
@@ -483,6 +573,69 @@ namespace MathLogic
 		{
 			if (e.CloseReason != CloseReason.None)
 				DialogResult = DialogResult.Cancel;
+		}
+
+		private int TabsCount(string line)
+		{
+			int answer = 0;
+			for (int i = 0; i < line?.Length; i++)
+				if (line[i] == '\t')
+					answer++;
+				else break;
+			return answer;
+		}
+
+		private void scriptRichTextBox_KeyUp(object sender, KeyEventArgs e)
+		{
+			int currentLine = scriptRichTextBox.GetLineFromCharIndex(scriptRichTextBox.SelectionStart);
+			if (e.KeyCode == Keys.Enter)
+			{
+				string prevLine = scriptRichTextBox.Lines[currentLine - 1] ?? string.Empty;
+				int prevLineTabs = TabsCount(prevLine);
+				RemoveUnnecessarySpaces(ref prevLine);
+				int openBrackets = 0, closeBrackets = 0, symbolBracketsCount = 0;
+				foreach (char c in prevLine)
+				{
+					if ((c == '\"') || (c == '\''))
+					{
+						symbolBracketsCount = ++symbolBracketsCount % 2;
+					}
+					else if (c == '{')
+					{
+						openBrackets++;
+					}
+				}
+				int currentLineTabs = prevLineTabs + openBrackets - closeBrackets;
+				if (currentLineTabs < 0)
+					currentLineTabs = 0;
+				ChangeLine(currentLine, string.Empty.PadLeft(currentLineTabs, '\t'));
+			}
+			else if (e.KeyCode == Keys.OemOpenBrackets)
+			{
+				int pos = scriptRichTextBox.SelectionStart;
+				scriptRichTextBox.Text = scriptRichTextBox.Text.Insert(scriptRichTextBox.SelectionStart, Environment.NewLine);
+				scriptRichTextBox.SelectionStart = pos + 1;
+				scriptRichTextBox_KeyUp(sender, new KeyEventArgs(Keys.Enter));
+			}
+			else if (e.KeyCode == Keys.OemCloseBrackets)
+			{
+				string line = scriptRichTextBox.Lines[currentLine];
+				RemoveUnnecessarySpaces(ref line);
+				if (scriptRichTextBox.Lines[currentLine].StartsWith('\t'.ToString()) && line == "}")
+				{
+					ChangeLine(currentLine, scriptRichTextBox.Lines[currentLine].Remove(0, 1));
+				}
+			}
+		}
+
+		private void ChangeLine(int line, string text)
+		{
+			int s1 = scriptRichTextBox.GetFirstCharIndexFromLine(line);
+			int s2 = line < scriptRichTextBox.Lines.Count() - 1 ?
+					  scriptRichTextBox.GetFirstCharIndexFromLine(line + 1) - 1 :
+					  scriptRichTextBox.Text.Length;
+			scriptRichTextBox.Select(s1, s2 - s1);
+			scriptRichTextBox.SelectedText = text;
 		}
 	}
 }

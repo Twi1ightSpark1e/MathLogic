@@ -36,6 +36,7 @@
 			// 
 			// scriptRichTextBox
 			// 
+			this.scriptRichTextBox.AcceptsTab = true;
 			this.scriptRichTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.scriptRichTextBox.Font = new System.Drawing.Font("Lucida Console", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
@@ -44,6 +45,7 @@
 			this.scriptRichTextBox.Size = new System.Drawing.Size(516, 290);
 			this.scriptRichTextBox.TabIndex = 0;
 			this.scriptRichTextBox.Text = "";
+			this.scriptRichTextBox.KeyUp += new System.Windows.Forms.KeyEventHandler(this.scriptRichTextBox_KeyUp);
 			// 
 			// executeButton
 			// 
