@@ -9,7 +9,7 @@ using System.Windows.Forms;
 namespace MathLogic
 {
 	public partial class ScriptForm : Form
-    {
+	{
 		internal static List<Triple<string, string, bool>> output = new List<Triple<string, string, bool>>();
 
 		[Flags]
@@ -20,9 +20,9 @@ namespace MathLogic
 			Quotes = 0x4
 		}
 
-        private static Dictionary<string, dynamic> variables = new Dictionary<string, dynamic>();
+		private static Dictionary<string, dynamic> variables = new Dictionary<string, dynamic>();
 
-	    private static Hashtable types = new Hashtable()
+		private static Hashtable types = new Hashtable()
 		{
 			{ "int", "int64" },
 			{ "uint", "uint64" },
@@ -42,7 +42,7 @@ namespace MathLogic
 					ResolveExpression(ref arg0);
 					ResolveExpression(ref arg1);
 					ResolveExpression(ref arg2);
-					output.Add(new Triple<string, string, bool>(TrimPairs(arg0, TrimSymbols.Apostrophes | TrimSymbols.Quotes), TrimPairs(arg1, TrimSymbols.Apostrophes | TrimSymbols.Quotes), 
+					output.Add(new Triple<string, string, bool>(TrimPairs(arg0, TrimSymbols.Apostrophes | TrimSymbols.Quotes), TrimPairs(arg1, TrimSymbols.Apostrophes | TrimSymbols.Quotes),
 						bool.Parse(arg2)));
 				})) },
 			{ ("show", 1, new Action<dynamic>((dynamic i) =>
@@ -74,10 +74,11 @@ namespace MathLogic
 			{ ("!=", 3, (string type, dynamic left, dynamic right) => left != right) }
 		};
 
-        public ScriptForm()
-        {
-            InitializeComponent();
-        }
+		public ScriptForm()
+		{
+			InitializeComponent();
+			scriptRichTextBox.SelectionTabs = new int[] { 28, 56, 84, 132 };
+		}
 
 		private dynamic GetInstance(string type)
 		{
@@ -92,7 +93,7 @@ namespace MathLogic
 			temp = Convert.ChangeType(TrimPairs(value, TrimSymbols.Apostrophes | TrimSymbols.Quotes), Type.GetType($"System.{type}", false, true));
 			return temp;
 		}
-		
+
 		private static string GetTypeByValue(string value)
 		{
 			if (value[0] == '\'')
@@ -124,12 +125,12 @@ namespace MathLogic
 		}
 
 		private string ReadCommand(string source, ref int start)
-        {
+		{
 			string temp = string.Empty;
-	        int i, symbolBracketsCount = 0;
-	        for (i = start; i < source.Length; i++)
-			{ 
-		        if ((source[i] == '\"') || (source[i] == '\''))
+			int i, symbolBracketsCount = 0;
+			for (i = start; i < source.Length; i++)
+			{
+				if ((source[i] == '\"') || (source[i] == '\''))
 				{
 					symbolBracketsCount = ++symbolBracketsCount % 2;
 					temp += source[i];
@@ -141,24 +142,24 @@ namespace MathLogic
 					continue;
 				}
 				else if ((source[i] != ';') && (source[i] != '{') && (source[i] != '}'))
-			        temp += source[i];
+					temp += source[i];
 				else break;
 				if (source[i] == ')')
 					break;
 			}
-	        start = i;
-            return temp;
-        }
+			start = i;
+			return temp;
+		}
 
-	    private string ReadCommandsInBrackets(string source, ref int start)
-	    {
+		private string ReadCommandsInBrackets(string source, ref int start)
+		{
 			string temp = string.Empty;
 			int i, symbolBracketsCount = 0, opBracketsCount = 0;
 
-		    while (source[start] == '\n' || source[start] == '\t' || source[start] == ' ')
-			    start++;
-		    if (source[start] != '{')
-			    return ReadCommand(source, ref start);
+			while (source[start] == '\n' || source[start] == '\t' || source[start] == ' ')
+				start++;
+			if (source[start] != '{')
+				return ReadCommand(source, ref start);
 
 			for (i = start; i < source.Length; i++)
 			{
@@ -369,15 +370,15 @@ namespace MathLogic
 					expression = variables[expression].ToString();
 			}
 			int minPriority = (from x in operators
-							  select x.priority).Max();
+							   select x.priority).Max();
 			for (int priority = 0; priority <= minPriority; priority++)
 			{
 				var ops = from x in operators
 						  where x.priority == priority
 						  select x;
 				var opsNames = (from x in operators
-							   where x.priority == priority
-							   select x.name).ToList();
+								where x.priority == priority
+								select x.name).ToList();
 				int pos = -1;
 				do
 				{
@@ -396,7 +397,7 @@ namespace MathLogic
 
 						string exp = expression;
 						var func = (from x in ops
-								    where x.name == exp.Substring(pos, opsNames[index].Length)
+									where x.name == exp.Substring(pos, opsNames[index].Length)
 									select x.function).First();
 						int temp = position - 1;
 						string left = new string(ReadOperand(expression, ref temp, true).Reverse().ToArray());
@@ -431,8 +432,8 @@ namespace MathLogic
 			}
 		}
 
-	    private bool IsVariableDefining(string command)
-	    {
+		private bool IsVariableDefining(string command)
+		{
 			foreach (DictionaryEntry typename in types)
 			{
 				if (command.StartsWith(typename.Key.ToString()))
@@ -454,11 +455,11 @@ namespace MathLogic
 					return true;
 				}
 			}
-		    return false;
-	    }
+			return false;
+		}
 
-	    private bool IsAssigment(string command)
-	    {
+		private bool IsAssigment(string command)
+		{
 			for (int i = 0; i < variables.Count; i++)
 			{
 				var varname = variables.ElementAt(i).Key;
@@ -479,11 +480,11 @@ namespace MathLogic
 					}
 				}
 			}
-		    return false;
-	    }
+			return false;
+		}
 
-	    private bool IsMethod(string command)
-	    {
+		private bool IsMethod(string command)
+		{
 			foreach (var method in commands)
 			{
 				if (command.StartsWith(method.name))
@@ -503,37 +504,37 @@ namespace MathLogic
 					return true;
 				}
 			}
-		    return false;
-	    }
+			return false;
+		}
 
-	    private bool IsCondition(string text, string command, ref int position)
-	    {
-		    if (command.StartsWith("if"))
-		    {
-			    command = command.Remove(0, 2).Trim();
-			    string cmds = command.Last() == ';'
-				    ? ReadCommand(text, ref position)
-				    : ReadCommandsInBrackets(text, ref position);
-			    ResolveExpression(ref command);
-			    bool.TryParse(command, out bool result);
-			    if (result)
-			    {
-				    DoScript(cmds);
-				    return true;
-			    }
-		    }
-		    return false;
-	    }
+		private bool IsCondition(string text, string command, ref int position)
+		{
+			if (command.StartsWith("if"))
+			{
+				command = command.Remove(0, 2).Trim();
+				string cmds = command.Last() == ';'
+					? ReadCommand(text, ref position)
+					: ReadCommandsInBrackets(text, ref position);
+				ResolveExpression(ref command);
+				bool.TryParse(command, out bool result);
+				if (result)
+				{
+					DoScript(cmds);
+					return true;
+				}
+			}
+			return false;
+		}
 
-        private void DoScript(string text)
-        {
-	        int position = 0;
-            while (position < text.Length-1)
-            {
-                string command = ReadCommand(text, ref position).
+		private void DoScript(string text)
+		{
+			int position = 0;
+			while (position < text.Length-1)
+			{
+				string command = ReadCommand(text, ref position).
 					Replace('\r', new char()).Replace('\n', new char()).Replace('\t', new char()).Trim('\0', ' ');
 				position++; //To skip semicolon
-	            //Search for defining variables
+							//Search for defining variables
 				if (IsVariableDefining(command))
 					continue;
 				//Search for assigments
@@ -542,13 +543,13 @@ namespace MathLogic
 				//Search for methods
 				if (IsMethod(command))
 					continue;
-	            if (IsCondition(text, command, ref position))
+				if (IsCondition(text, command, ref position))
 					continue;
 			}
 		}
 
-        private void executeButton_Click(object sender, EventArgs e)
-        {
+		private void executeButton_Click(object sender, EventArgs e)
+		{
 			variables.Clear();
 			output.Clear();
 			DoScript(scriptRichTextBox.Text);
@@ -557,10 +558,10 @@ namespace MathLogic
 			MessageBox.Show(permuts);
 			StartForm.AddPermutsFromScript(output);
 			DialogResult = DialogResult.OK;
-        }
+		}
 
-        private void checkButton_Click(object sender, EventArgs e)
-        {
+		private void checkButton_Click(object sender, EventArgs e)
+		{
 			variables.Clear();
 			output.Clear();
 			DoScript(scriptRichTextBox.Text);
@@ -588,7 +589,7 @@ namespace MathLogic
 		private void scriptRichTextBox_KeyUp(object sender, KeyEventArgs e)
 		{
 			int currentLine = scriptRichTextBox.GetLineFromCharIndex(scriptRichTextBox.SelectionStart);
-			if (e.KeyCode == Keys.Enter)
+			if (e.KeyCode == Keys.Enter && scriptRichTextBox.Lines[currentLine] == string.Empty)
 			{
 				string prevLine = scriptRichTextBox.Lines[currentLine - 1] ?? string.Empty;
 				int prevLineTabs = TabsCount(prevLine);
@@ -610,14 +611,14 @@ namespace MathLogic
 					currentLineTabs = 0;
 				ChangeLine(currentLine, string.Empty.PadLeft(currentLineTabs, '\t'));
 			}
-			else if (e.KeyCode == Keys.OemOpenBrackets)
+			else if (e.KeyValue == 219)
 			{
 				int pos = scriptRichTextBox.SelectionStart;
-				scriptRichTextBox.Text = scriptRichTextBox.Text.Insert(scriptRichTextBox.SelectionStart, Environment.NewLine);
-				scriptRichTextBox.SelectionStart = pos + 1;
-				scriptRichTextBox_KeyUp(sender, new KeyEventArgs(Keys.Enter));
+				int count = TabsCount(scriptRichTextBox.Lines[currentLine]);
+				scriptRichTextBox.Text = scriptRichTextBox.Text.Insert(scriptRichTextBox.SelectionStart, Environment.NewLine + string.Empty.PadLeft(count, '\t') + '}');
+				scriptRichTextBox.SelectionStart = pos;
 			}
-			else if (e.KeyCode == Keys.OemCloseBrackets)
+			else if (e.KeyValue == 221)
 			{
 				string line = scriptRichTextBox.Lines[currentLine];
 				RemoveUnnecessarySpaces(ref line);
