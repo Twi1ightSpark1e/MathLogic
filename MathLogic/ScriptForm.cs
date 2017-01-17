@@ -20,6 +20,16 @@ namespace MathLogic
 			Quotes = 0x4
 		}
 
+		enum WorkState
+		{
+			CannotBeDone,
+			CommandsDone,
+			Break,
+			Continue
+		}
+		private bool isInLoop;
+		private bool exitLoop;
+
 		private static Dictionary<string, dynamic> variables = new Dictionary<string, dynamic>();
 
 		private static Hashtable types = new Hashtable()
@@ -82,6 +92,8 @@ namespace MathLogic
 
 		private dynamic GetInstance(string type)
 		{
+			if (type.ToLower() == "string")
+				return string.Empty;
 			return Activator.CreateInstance(Type.GetType($"System.{type}", false, true));
 		}
 
@@ -96,6 +108,8 @@ namespace MathLogic
 
 		private static string GetTypeByValue(string value)
 		{
+			if (value == string.Empty)
+				return "string";
 			if (value[0] == '\'')
 				return "char";
 			if (value[0] == '\"')
@@ -127,7 +141,7 @@ namespace MathLogic
 		private string ReadCommand(string source, ref int start)
 		{
 			string temp = string.Empty;
-			int i, symbolBracketsCount = 0;
+			int i, symbolBracketsCount = 0, bracketsCount = 0;
 			for (i = start; i < source.Length; i++)
 			{
 				if ((source[i] == '\"') || (source[i] == '\''))
@@ -144,8 +158,11 @@ namespace MathLogic
 				else if ((source[i] != ';') && (source[i] != '{') && (source[i] != '}'))
 					temp += source[i];
 				else break;
+				if (source[i] == '(')
+					bracketsCount++;
 				if (source[i] == ')')
-					break;
+					if (--bracketsCount <= 0)
+						break;
 			}
 			start = i;
 			return temp;
@@ -366,8 +383,15 @@ namespace MathLogic
 			expression = TrimPairs(expression, TrimSymbols.Brackets);
 			foreach (var variable in variables)
 			{
+				char add = Char.MinValue;
 				if (expression == variable.Key)
-					expression = variables[expression].ToString();
+				{
+					if (variable.Value.GetType().Name == "String")
+						add = '\"';
+					else if (variable.Value.GetType().Name == "Char")
+						add = '\'';
+					expression = string.Format("{0}{1}{0}", add, variables[expression].ToString()).Trim('\0');
+				}
 			}
 			int minPriority = (from x in operators
 							   select x.priority).Max();
@@ -421,10 +445,12 @@ namespace MathLogic
 						while (p != -1);
 						ResolveExpression(ref left);
 						ResolveExpression(ref right);
-						left = TrimPairs(left, TrimSymbols.Apostrophes | TrimSymbols.Quotes);
-						right = TrimPairs(right, TrimSymbols.Apostrophes | TrimSymbols.Quotes);
-						dynamic l = GetTypeByValue(left).ToLower() == "string" ? left : Convert.ChangeType(left, Type.GetType($"System.{types[GetTypeByValue(left)].ToString()}", false, true));
-						dynamic r = GetTypeByValue(right).ToLower() == "string" ? right : Convert.ChangeType(right, Type.GetType($"System.{types[GetTypeByValue(right)].ToString()}", false, true));
+						dynamic l = GetTypeByValue(left).ToLower() == "string" 
+							? TrimPairs(left, TrimSymbols.Apostrophes | TrimSymbols.Quotes) 
+							: Convert.ChangeType(left, Type.GetType($"System.{types[GetTypeByValue(left)].ToString()}", false, true));
+						dynamic r = GetTypeByValue(right).ToLower() == "string" 
+							? TrimPairs(right, TrimSymbols.Apostrophes | TrimSymbols.Quotes) 
+							: Convert.ChangeType(right, Type.GetType($"System.{types[GetTypeByValue(right)].ToString()}", false, true));
 						expression = expression.Insert(insert, func(SelectDestinationType(left, right), l, r).ToString());
 					}
 				}
@@ -441,17 +467,21 @@ namespace MathLogic
 					int temp = 0;
 					command = command.Remove(0, typename.Key.ToString().Length);
 					string varname = ReadOperand(command, ref temp);
-					string op = ReadOperator(command, ref temp);
-					if (op == "=") //Variable defined and initialized
+					//string op = ReadOperator(command, ref temp);
+					if (command.Length > temp + 1)
 					{
-						command = command.Remove(0, command.IndexOf('=') + 1);
-						string value = command;
-						if ((typename.Key.ToString() == "float") || (typename.Key.ToString() == "double"))
-							value = value.Replace('.', ',');
-						ResolveExpression(ref value);
-						variables.Add(varname, GetInstance(typename.Value.ToString(), TrimPairs(value, TrimSymbols.Apostrophes | TrimSymbols.Quotes)));
+						string op = command[temp++].ToString();
+						if (op == "=") //Variable defined and initialized
+						{
+							command = command.Remove(0, command.IndexOf('=') + 1);
+							string value = command;
+							if ((typename.Key.ToString() == "float") || (typename.Key.ToString() == "double"))
+								value = value.Replace('.', ',');
+							ResolveExpression(ref value);
+							variables.Add(varname, GetInstance(typename.Value.ToString(), TrimPairs(value, TrimSymbols.Apostrophes | TrimSymbols.Quotes)));
+						}
+						else variables.Add(varname, GetInstance(typename.Value.ToString())); //Variable not initialized
 					}
-					else variables.Add(varname, GetInstance(typename.Value.ToString())); //Variable not initialized
 					return true;
 				}
 			}
@@ -507,26 +537,59 @@ namespace MathLogic
 			return false;
 		}
 
-		private bool IsCondition(string text, string command, ref int position)
+		private WorkState IsCondition(string text, string command, ref int position)
 		{
 			if (command.StartsWith("if"))
 			{
 				command = command.Remove(0, 2).Trim();
-				string cmds = command.Last() == ';'
-					? ReadCommand(text, ref position)
-					: ReadCommandsInBrackets(text, ref position);
+				string cmds = ReadCommandsInBrackets(text, ref position);
 				ResolveExpression(ref command);
 				bool.TryParse(command, out bool result);
 				if (result)
 				{
-					DoScript(cmds);
-					return true;
+					var state = DoScript(cmds);
+					if (state != WorkState.CommandsDone)
+						return state;
 				}
+				return WorkState.CommandsDone;
+			}
+			return WorkState.CannotBeDone;
+		}
+
+		private bool IsLoop(string text, string command, ref int position)
+		{
+			if (command.StartsWith("while"))
+			{
+				command = command.Remove(0, 5);
+				string expression = command;
+				ResolveExpression(ref expression);
+				string cmds = ReadCommandsInBrackets(text, ref position);
+				bool boolResult;
+				long longResult;
+				bool.TryParse(expression, out boolResult); long.TryParse(expression, out longResult);
+				while (boolResult || (longResult != 0))
+				{
+					isInLoop = true;
+					if (exitLoop)
+						break;
+					expression = command;
+					ResolveExpression(ref expression);
+					boolResult = false; longResult = 0;
+					bool.TryParse(expression, out boolResult); long.TryParse(expression, out longResult);
+					if (boolResult || (longResult != 0))
+					{
+						var state = DoScript(cmds);
+						if (state == WorkState.Break)
+							break;
+					}
+				}
+				isInLoop = false;
+				return true;
 			}
 			return false;
 		}
 
-		private void DoScript(string text)
+		private WorkState DoScript(string text)
 		{
 			int position = 0;
 			while (position < text.Length-1)
@@ -535,6 +598,10 @@ namespace MathLogic
 					Replace('\r', new char()).Replace('\n', new char()).Replace('\t', new char()).Trim('\0', ' ');
 				position++; //To skip semicolon
 							//Search for defining variables
+				if (command.ToLower() == "continue")
+					return WorkState.Continue;
+				if (command.ToLower() == "break")
+					return WorkState.Break;
 				if (IsVariableDefining(command))
 					continue;
 				//Search for assigments
@@ -543,9 +610,17 @@ namespace MathLogic
 				//Search for methods
 				if (IsMethod(command))
 					continue;
-				if (IsCondition(text, command, ref position))
+				//Search for conditions
+				var state = IsCondition(text, command, ref position);
+				if (state == WorkState.CommandsDone)
+					continue;
+				if (state != WorkState.CannotBeDone)
+					return state;
+				//Search for loops
+				if (IsLoop(text, command, ref position))
 					continue;
 			}
+			return WorkState.CommandsDone;
 		}
 
 		private void executeButton_Click(object sender, EventArgs e)
