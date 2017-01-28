@@ -254,7 +254,7 @@ namespace MathLogic
 		}
 	}
 
-	class Triple<T1, T2, T3>
+	public class Triple<T1, T2, T3>
 	{
 		public T1 Key { get; set; }
 		public T2 Value { get; set; }

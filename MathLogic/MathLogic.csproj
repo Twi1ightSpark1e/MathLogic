@@ -87,6 +87,7 @@
       <DependentUpon>AddPermutsForm.cs</DependentUpon>
     </Compile>
     <Compile Include="DirtyWork.cs" />
+    <Compile Include="Interpreter.cs" />
     <Compile Include="ScriptForm.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -1,9 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.25920.0
+VisualStudioVersion = 15.0.26020.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MathLogic", "MathLogic\MathLogic.csproj", "{FF194A58-36D9-4029-B0A8-364982398729}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MathLogic.Tests", "MathLogic.Tests\MathLogic.Tests.csproj", "{BC4B4D3D-31CB-4755-B3C0-D9C4492FB32A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FF194A58-36D9-4029-B0A8-364982398729} = {FF194A58-36D9-4029-B0A8-364982398729}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +26,14 @@ Global
 		{FF194A58-36D9-4029-B0A8-364982398729}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FF194A58-36D9-4029-B0A8-364982398729}.Release|x64.ActiveCfg = Release|x64
 		{FF194A58-36D9-4029-B0A8-364982398729}.Release|x64.Build.0 = Release|x64
+		{BC4B4D3D-31CB-4755-B3C0-D9C4492FB32A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC4B4D3D-31CB-4755-B3C0-D9C4492FB32A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC4B4D3D-31CB-4755-B3C0-D9C4492FB32A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BC4B4D3D-31CB-4755-B3C0-D9C4492FB32A}.Debug|x64.Build.0 = Debug|Any CPU
+		{BC4B4D3D-31CB-4755-B3C0-D9C4492FB32A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC4B4D3D-31CB-4755-B3C0-D9C4492FB32A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC4B4D3D-31CB-4755-B3C0-D9C4492FB32A}.Release|x64.ActiveCfg = Release|Any CPU
+		{BC4B4D3D-31CB-4755-B3C0-D9C4492FB32A}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
